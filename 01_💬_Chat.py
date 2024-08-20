@@ -80,14 +80,11 @@ def main():
                             {"role": m["role"], "content": m["content"]}
                             for m in st.session_state.messages
                         ],
-                        stream=True,
+                        stream=False,  # Use synchronous mode if not streaming
                     )
 
-                    # Handle streaming response
-                    response_text = ""
-                    async for chunk in response:
-                        response_text += chunk["content"]
-                        st.write(response_text, unsafe_allow_html=True)
+                    # Process the response
+                    response_text = response.get("choices", [{}])[0].get("text", "")
 
             st.session_state.messages.append({"role": "assistant", "content": response_text})
 
@@ -96,4 +93,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
