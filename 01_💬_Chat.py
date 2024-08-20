@@ -30,8 +30,7 @@ def main():
     st.subheader("Ollama Playground", divider="red", anchor=False)
 
     # Retrieve the Ollama key from environment variables
-    ollama_key = os.getenv('OLLAMA_API_KEY')
-
+    ollama_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA2jHVv5CsXYfbYpBpI4oBQyM8AxcKtXAEza+Vy40GJS"
     if not ollama_key:
         st.error("Ollama API key not found. Please set the OLLAMA_API_KEY environment variable.", icon="⛔️")
         return
