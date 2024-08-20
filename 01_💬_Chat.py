@@ -5,13 +5,13 @@ from openai import OpenAI
 from utilities.icon import page_icon
 
 st.set_page_config(
-    page_title="Chat playground",
+    page_title="Chat Playground",
     page_icon="💬",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-def extract_model_names(models_info: list) -> tuple:
+def extract_model_names(models_info: dict) -> tuple:
     """
     Extracts the model names from the models information.
 
@@ -30,24 +30,27 @@ def main():
     st.subheader("Ollama Playground", divider="red", anchor=False)
 
     # Retrieve the Ollama key from environment variables
-    ollama_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA2jHVv5CsXYfbYpBpI4oBQyM8AxcKtXAEza+Vy40GJS"
+    ollama_key = os.getenv("OLLAMA_API_KEY")
     if not ollama_key:
         st.error("Ollama API key not found. Please set the OLLAMA_API_KEY environment variable.", icon="⛔️")
         return
 
     client = OpenAI(
         base_url="http://localhost:11434/v1",
-        api_key=ollama_key,  # Use the environment variable
+        api_key=ollama_key,
     )
 
-    models_info = ollama.list()
-    available_models = extract_model_names(models_info)
+    try:
+        models_info = ollama.list()
+        available_models = extract_model_names(models_info)
+    except Exception as e:
+        st.error(f"Failed to retrieve models: {e}", icon="⛔️")
+        return
 
     if available_models:
         selected_model = st.selectbox(
             "Pick a model available locally on your system ↓", available_models
         )
-
     else:
         st.warning("You have not pulled any model from Ollama yet!", icon="⚠️")
         if st.button("Go to settings to download a model"):
@@ -65,14 +68,13 @@ def main():
 
     if prompt := st.chat_input("Enter a prompt here..."):
         try:
-            st.session_state.messages.append(
-                {"role": "user", "content": prompt})
+            st.session_state.messages.append({"role": "user", "content": prompt})
 
             message_container.chat_message("user", avatar="😎").markdown(prompt)
 
             with message_container.chat_message("assistant", avatar="🤖"):
-                with st.spinner("model working..."):
-                    stream = client.chat.completions.create(
+                with st.spinner("Model is working..."):
+                    response = client.chat.completions.create(
                         model=selected_model,
                         messages=[
                             {"role": m["role"], "content": m["content"]}
@@ -80,13 +82,18 @@ def main():
                         ],
                         stream=True,
                     )
-                # stream response
-                response = st.write_stream(stream)
-            st.session_state.messages.append(
-                {"role": "assistant", "content": response})
+
+                    # Handle streaming response
+                    response_text = ""
+                    async for chunk in response:
+                        response_text += chunk["content"]
+                        st.write(response_text, unsafe_allow_html=True)
+
+            st.session_state.messages.append({"role": "assistant", "content": response_text})
 
         except Exception as e:
-            st.error(e, icon="⛔️")
+            st.error(f"An error occurred: {e}", icon="⛔️")
 
 if __name__ == "__main__":
     main()
+
